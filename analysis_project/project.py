@@ -58,6 +58,9 @@ class Project:
 	config : dict
 		JSON-like dictionary containing project configuration.
 
+	configfile : pathlib.Path
+		Path to config file that was parsed for project (if any).
+
 	rootpathstr : str
 		Root path as string.
 
@@ -81,14 +84,14 @@ class Project:
 		# Verify root dir and config file
 		if path.is_file():
 			self.rootpath = path.parent.absolute()
-			configfile = path
+			self.configfile = path
 
 		elif path.is_dir():
 			self.rootpath = path.absolute()
 
-			configfile = path / DEFAULT_PROJECT_FILENAME
-			if not configfile.exists():
-				configfile = None
+			self.configfile = path / DEFAULT_PROJECT_FILENAME
+			if not self.configfile.exists():
+				self.configfile = None
 
 		else:
 			raise OSError('{} is not a file or directory'.format(path))
@@ -97,8 +100,11 @@ class Project:
 		if config is not None:
 			self.config = config
 
-		elif configfile is not None:
-			self.config = self.read_config(configfile)
+		elif self.configfile is not None:
+			self.config = self.read_config(self.configfile)
+
+		else:
+			self.config = {}
 
 		# Set attrs from config
 		self.name = self.config.get('name')
@@ -114,7 +120,9 @@ class Project:
 	@classmethod
 	def read_config(cls, file):
 		with file.open() as fh:
-			return yaml.safe_load(fh)
+			config = yaml.safe_load(fh)
+
+		return {} if config is None else config
 
 	def run_ipython(self, pyfile, **kwargs):
 		"""Run a Python file and import its contents into the IPython user namespace.
